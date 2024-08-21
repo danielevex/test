@@ -1,0 +1,729 @@
+<html><head><base href="https://cms.esempio.it/">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CMS Aziendale</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f8f9fa;
+        }
+        .navbar-brand {
+            font-weight: bold;
+            color: #007bff !important;
+        }
+        .card {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transition: 0.3s;
+        }
+        .card:hover {
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        }
+        .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="#">CMS Aziendale</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="homeLink">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="documentiLink">Documenti</a>
+                    </li>
+                    <li class="nav-item" id="adminNavItem" style="display: none;">
+                        <a class="nav-link" href="#" id="adminLink">Pannello Admin</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="loginLink">Accedi</a>
+                    </li>
+                    <li class="nav-item" style="display: none;">
+                        <a class="nav-link" href="#" id="logoutLink">Esci</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div id="content"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+        // Simulazione del backend
+        const backend = {
+            users: [
+                { id: 1, username: 'admin', password: 'admin', role: 'admin' },
+                { id: 2, username: 'user1', password: 'password1', role: 'user', office: 'Ufficio A' },
+                { id: 3, username: 'user2', password: 'password2', role: 'user', office: 'Ufficio B' }
+            ],
+            offices: [
+                { id: 1, name: 'Ufficio A' },
+                { id: 2, name: 'Ufficio B' }
+            ],
+            documents: [
+                { id: 1, title: 'Documento 1', content: 'Contenuto del documento 1', office: 'Ufficio A' },
+                { id: 2, title: 'Documento 2', content: 'Contenuto del documento 2', office: 'Ufficio B' }
+            ],
+            currentUser: null,
+
+            login(username, password) {
+                const user = this.users.find(u => u.username === username && u.password === password);
+                if (user) {
+                    this.currentUser = user;
+                    return true;
+                }
+                return false;
+            },
+
+            logout() {
+                this.currentUser = null;
+            },
+
+            getDocuments() {
+                if (this.currentUser.role === 'admin') {
+                    return this.documents;
+                } else {
+                    return this.documents.filter(d => d.office === this.currentUser.office);
+                }
+            },
+
+            addDocument(title, content, office) {
+                const newDoc = {
+                    id: this.documents.length + 1,
+                    title,
+                    content,
+                    office
+                };
+                this.documents.push(newDoc);
+                return newDoc;
+            },
+
+            updateDocument(id, title, content, office) {
+                const doc = this.documents.find(d => d.id === id);
+                if (doc) {
+                    doc.title = title;
+                    doc.content = content;
+                    doc.office = office;
+                    return doc;
+                }
+                return null;
+            },
+
+            deleteDocument(id) {
+                const index = this.documents.findIndex(d => d.id === id);
+                if (index !== -1) {
+                    this.documents.splice(index, 1);
+                    return true;
+                }
+                return false;
+            },
+
+            getOffices() {
+                return this.offices;
+            },
+
+            addOffice(name) {
+                const newOffice = {
+                    id: this.offices.length + 1,
+                    name
+                };
+                this.offices.push(newOffice);
+                return newOffice;
+            },
+
+            updateOffice(id, name) {
+                const office = this.offices.find(o => o.id === id);
+                if (office) {
+                    office.name = name;
+                    return office;
+                }
+                return null;
+            },
+
+            deleteOffice(id) {
+                const index = this.offices.findIndex(o => o.id === id);
+                if (index !== -1) {
+                    this.offices.splice(index, 1);
+                    return true;
+                }
+                return false;
+            },
+
+            getUsers() {
+                return this.users.map(({ password, ...user }) => user);
+            },
+
+            addUser(username, password, role, office) {
+                const newUser = {
+                    id: this.users.length + 1,
+                    username,
+                    password,
+                    role,
+                    office
+                };
+                this.users.push(newUser);
+                return { ...newUser, password: undefined };
+            },
+
+            updateUser(id, username, password, role, office) {
+                const user = this.users.find(u => u.id === id);
+                if (user) {
+                    user.username = username;
+                    if (password) user.password = password;
+                    user.role = role;
+                    user.office = office;
+                    return { ...user, password: undefined };
+                }
+                return null;
+            },
+
+            deleteUser(id) {
+                const index = this.users.findIndex(u => u.id === id);
+                if (index !== -1) {
+                    this.users.splice(index, 1);
+                    return true;
+                }
+                return false;
+            }
+        };
+
+        // Frontend
+        const app = {
+            init() {
+                this.bindEvents();
+                this.showLoginForm();
+            },
+
+            bindEvents() {
+                document.getElementById('homeLink').addEventListener('click', () => this.showHome());
+                document.getElementById('documentiLink').addEventListener('click', () => this.showDocuments());
+                document.getElementById('adminLink').addEventListener('click', () => this.showAdminPanel());
+                document.getElementById('loginLink').addEventListener('click', () => this.showLoginForm());
+                document.getElementById('logoutLink').addEventListener('click', () => this.logout());
+            },
+
+            showHome() {
+                const content = document.getElementById('content');
+                content.innerHTML = `
+                    <h1 class="mb-4">Benvenuto nel CMS Aziendale</h1>
+                    <p>Questo è un sistema di gestione dei contenuti per la tua azienda. Puoi gestire documenti, uffici e utenti in modo semplice e intuitivo.</p>
+                `;
+            },
+
+            showLoginForm() {
+                const content = document.getElementById('content');
+                content.innerHTML = `
+                    <h2 class="mb-4">Accedi</h2>
+                    <form id="loginForm">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Nome utente</label>
+                            <input type="text" class="form-control" id="username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Accedi</button>
+                    </form>
+                `;
+                document.getElementById('loginForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const username = document.getElementById('username').value;
+                    const password = document.getElementById('password').value;
+                    this.login(username, password);
+                });
+            },
+
+            login(username, password) {
+                if (backend.login(username, password)) {
+                    this.updateNavbar();
+                    this.showHome();
+                } else {
+                    alert('Credenziali non valide');
+                }
+            },
+
+            logout() {
+                backend.logout();
+                this.updateNavbar();
+                this.showLoginForm();
+            },
+
+            updateNavbar() {
+                const adminNavItem = document.getElementById('adminNavItem');
+                const loginLink = document.getElementById('loginLink');
+                const logoutLink = document.getElementById('logoutLink');
+
+                if (backend.currentUser) {
+                    loginLink.style.display = 'none';
+                    logoutLink.style.display = 'block';
+                    if (backend.currentUser.role === 'admin') {
+                        adminNavItem.style.display = 'block';
+                    } else {
+                        adminNavItem.style.display = 'none';
+                    }
+                } else {
+                    loginLink.style.display = 'block';
+                    logoutLink.style.display = 'none';
+                    adminNavItem.style.display = 'none';
+                }
+            },
+
+            showDocuments() {
+                if (!backend.currentUser) {
+                    this.showLoginForm();
+                    return;
+                }
+
+                const documents = backend.getDocuments();
+                const content = document.getElementById('content');
+                content.innerHTML = `
+                    <h2 class="mb-4">Documenti</h2>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Titolo</th>
+                                <th>Ufficio</th>
+                                <th>Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${documents.map(doc => `
+                                <tr>
+                                    <td>${doc.title}</td>
+                                    <td>${doc.office}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-info view-doc" data-id="${doc.id}">Visualizza</button>
+                                        ${backend.currentUser.role === 'admin' ? `
+                                            <button class="btn btn-sm btn-warning edit-doc" data-id="${doc.id}">Modifica</button>
+                                            <button class="btn btn-sm btn-danger delete-doc" data-id="${doc.id}">Elimina</button>
+                                        ` : ''}
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    ${backend.currentUser.role === 'admin' ? '<button class="btn btn-primary" id="addDocBtn">Aggiungi Documento</button>' : ''}
+                `;
+
+                content.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('view-doc')) {
+                        this.viewDocument(e.target.dataset.id);
+                    } else if (e.target.classList.contains('edit-doc')) {
+                        this.editDocument(e.target.dataset.id);
+                    } else if (e.target.classList.contains('delete-doc')) {
+                        this.deleteDocument(e.target.dataset.id);
+                    }
+                });
+
+                const addDocBtn = document.getElementById('addDocBtn');
+                if (addDocBtn) {
+                    addDocBtn.addEventListener('click', () => this.addDocument());
+                }
+            },
+
+            viewDocument(id) {
+                const doc = backend.documents.find(d => d.id === parseInt(id));
+                if (doc) {
+                    const content = document.getElementById('content');
+                    content.innerHTML = `
+                        <h2 class="mb-4">${doc.title}</h2>
+                        <p><strong>Ufficio:</strong> ${doc.office}</p>
+                        <div class="card">
+                            <div class="card-body">
+                                ${doc.content}
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary mt-3" id="backBtn">Indietro</button>
+                    `;
+                    document.getElementById('backBtn').addEventListener('click', () => this.showDocuments());
+                }
+            },
+
+            editDocument(id) {
+                const doc = backend.documents.find(d => d.id === parseInt(id));
+                if (doc) {
+                    const content = document.getElementById('content');
+                    content.innerHTML = `
+                        <h2 class="mb-4">Modifica Documento</h2>
+                        <form id="editDocForm">
+                            <div class="mb-3">
+                                <label for="title" class="form-label">Titolo</label>
+                                <input type="text" class="form-control" id="title" value="${doc.title}" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="content" class="form-label">Contenuto</label>
+                                <textarea class="form-control" id="content" rows="5" required>${doc.content}</textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="office" class="form-label">Ufficio</label>
+                                <select class="form-control" id="office" required>
+                                    ${backend.offices.map(office => `
+                                        <option value="${office.name}" ${office.name === doc.office ? 'selected' : ''}>${office.name}</option>
+                                    `).join('')}
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Salva</button>
+                            <button type="button" class="btn btn-secondary" id="cancelBtn">Annulla</button>
+                        </form>
+                    `;
+                    document.getElementById('editDocForm').addEventListener('submit', (e) => {
+                        e.preventDefault();
+                        const title = document.getElementById('title').value;
+                        const content = document.getElementById('content').value;
+                        const office = document.getElementById('office').value;
+                        backend.updateDocument(doc.id, title, content, office);
+                        this.showDocuments();
+                    });
+                    document.getElementById('cancelBtn').addEventListener('click', () => this.showDocuments());
+                }
+            },
+
+            deleteDocument(id) {
+                if (confirm('Sei sicuro di voler eliminare questo documento?')) {
+                    backend.deleteDocument(parseInt(id));
+                    this.showDocuments();
+                }
+            },
+
+            addDocument() {
+                const content = document.getElementById('content');
+                content.innerHTML = `
+                    <h2 class="mb-4">Aggiungi Documento</h2>
+                    <form id="addDocForm">
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Titolo</label>
+                            <input type="text" class="form-control" id="title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="content" class="form-label">Contenuto</label>
+                            <textarea class="form-control" id="content" rows="5" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="office" class="form-label">Ufficio</label>
+                            <select class="form-control" id="office" required>
+                                ${backend.offices.map(office => `
+                                    <option value="${office.name}">${office.name}</option>
+                                `).join('')}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Salva</button>
+                        <button type="button" class="btn btn-secondary" id="cancelBtn">Annulla</button>
+                    </form>
+                `;
+                document.getElementById('addDocForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const title = document.getElementById('title').value;
+                    const content = document.getElementById('content').value;
+                    const office = document.getElementById('office').value;
+                    backend.addDocument(title, content, office);
+                    this.showDocuments();
+                });
+                document.getElementById('cancelBtn').addEventListener('click', () => this.showDocuments());
+            },
+
+            showAdminPanel() {
+                if (!backend.currentUser || backend.currentUser.role !== 'admin') {
+                    this.showHome();
+                    return;
+                }
+
+                const content = document.getElementById('content');
+                content.innerHTML = `
+                    <h2 class="mb-4">Pannello Amministratore</h2>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Gestione Utenti</h5>
+                                    <p class="card-text">Aggiungi, modifica o elimina gli utenti del sistema.</p>
+                                    <button class="btn btn-primary" id="manageUsersBtn">Gestisci Utenti</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Gestione Uffici</h5>
+                                    <p class="card-text">Aggiungi, modifica o elimina gli uffici dell'azienda.</p>
+                                    <button class="btn btn-primary" id="manageOfficesBtn">Gestisci Uffici</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Gestione Documenti</h5>
+                                    <p class="card-text">Visualizza, modifica o elimina tutti i documenti.</p>
+                                    <button class="btn btn-primary" id="manageDocsBtn">Gestisci Documenti</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('manageUsersBtn').addEventListener('click', () => this.showUsers());
+                document.getElementById('manageOfficesBtn').addEventListener('click', () => this.showOffices());
+                document.getElementById('manageDocsBtn').addEventListener('click', () => this.showDocuments());
+            },
+
+            showUsers() {
+                const users = backend.getUsers();
+                const content = document.getElementById('content');
+                content.innerHTML = `
+                    <h2 class="mb-4">Gestione Utenti</h2>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Nome utente</th>
+                                <th>Ruolo</th>
+                                <th>Ufficio</th>
+                                <th>Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${users.map(user => `
+                                <tr>
+                                    <td>${user.username}</td>
+                                    <td>${user.role}</td>
+                                    <td>${user.office || '-'}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-warning edit-user" data-id="${user.id}">Modifica</button>
+                                        <button class="btn btn-sm btn-danger delete-user" data-id="${user.id}">Elimina</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    <button class="btn btn-primary" id="addUserBtn">Aggiungi Utente</button>
+                    <button class="btn btn-secondary" id="backBtn">Indietro</button>
+                `;
+
+                content.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('edit-user')) {
+                        this.editUser(e.target.dataset.id);
+                    } else if (e.target.classList.contains('delete-user')) {
+                        this.deleteUser(e.target.dataset.id);
+                    }
+                });
+
+                document.getElementById('addUserBtn').addEventListener('click', () => this.addUser());
+                document.getElementById('backBtn').addEventListener('click', () => this.showAdminPanel());
+            },
+
+            editUser(id) {
+                const user = backend.users.find(u => u.id === parseInt(id));
+                if (user) {
+                    const content = document.getElementById('content');
+                    content.innerHTML = `
+                        <h2 class="mb-4">Modifica Utente</h2>
+                        <form id="editUserForm">
+                            <div class="mb-3">
+                                <label for="username" class="form-label">Nome utente</label>
+                                <input type="text" class="form-control" id="username" value="${user.username}" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Password (lascia vuoto per non modificare)</label>
+                                <input type="password" class="form-control" id="password">
+                            </div>
+                            <div class="mb-3">
+                                <label for="role" class="form-label">Ruolo</label>
+                                <select class="form-control" id="role" required>
+                                    <option value="user" ${user.role === 'user' ? 'selected' : ''}>Utente</option>
+                                    <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Amministratore</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="office" class="form-label">Ufficio</label>
+                                <select class="form-control" id="office">
+                                    <option value="">-</option>
+                                    ${backend.offices.map(office => `
+                                        <option value="${office.name}" ${office.name === user.office ? 'selected' : ''}>${office.name}</option>
+                                    `).join('')}
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Salva</button>
+                            <button type="button" class="btn btn-secondary" id="cancelBtn">Annulla</button>
+                        </form>
+                    `;
+                    document.getElementById('editUserForm').addEventListener('submit', (e) => {
+                        e.preventDefault();
+                        const username = document.getElementById('username').value;
+                        const password = document.getElementById('password').value;
+                        const role = document.getElementById('role').value;
+                        const office = document.getElementById('office').value;
+                        backend.updateUser(user.id, username, password, role, office);
+                        this.showUsers();
+                    });
+                    document.getElementById('cancelBtn').addEventListener('click', () => this.showUsers());
+                }
+            },
+
+            deleteUser(id) {
+                if (confirm('Sei sicuro di voler eliminare questo utente?')) {
+                    backend.deleteUser(parseInt(id));
+                    this.showUsers();
+                }
+            },
+
+            addUser() {
+                const content = document.getElementById('content');
+                content.innerHTML = `
+                    <h2 class="mb-4">Aggiungi Utente</h2>
+                    <form id="addUserForm">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Nome utente</label>
+                            <input type="text" class="form-control" id="username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="role" class="form-label">Ruolo</label>
+                            <select class="form-control" id="role" required>
+                                <option value="user">Utente</option>
+                                <option value="admin">Amministratore</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="office" class="form-label">Ufficio</label>
+                            <select class="form-control" id="office">
+                                <option value="">-</option>
+                                ${backend.offices.map(office => `
+                                    <option value="${office.name}">${office.name}</option>
+                                `).join('')}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Salva</button>
+                        <button type="button" class="btn btn-secondary" id="cancelBtn">Annulla</button>
+                    </form>
+                `;
+                document.getElementById('addUserForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const username = document.getElementById('username').value;
+                    const password = document.getElementById('password').value;
+                    const role = document.getElementById('role').value;
+                    const office = document.getElementById('office').value;
+                    backend.addUser(username, password, role, office);
+                    this.showUsers();
+                });
+                document.getElementById('cancelBtn').addEventListener('click', () => this.showUsers());
+            },
+
+            showOffices() {
+                const offices = backend.getOffices();
+                const content = document.getElementById('content');
+                content.innerHTML = `
+                    <h2 class="mb-4">Gestione Uffici</h2>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${offices.map(office => `
+                                <tr>
+                                    <td>${office.name}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-warning edit-office" data-id="${office.id}">Modifica</button>
+                                        <button class="btn btn-sm btn-danger delete-office" data-id="${office.id}">Elimina</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    <button class="btn btn-primary" id="addOfficeBtn">Aggiungi Ufficio</button>
+                    <button class="btn btn-secondary" id="backBtn">Indietro</button>
+                `;
+
+                content.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('edit-office')) {
+                        this.editOffice(e.target.dataset.id);
+                    } else if (e.target.classList.contains('delete-office')) {
+                        this.deleteOffice(e.target.dataset.id);
+                    }
+                });
+
+                document.getElementById('addOfficeBtn').addEventListener('click', () => this.addOffice());
+                document.getElementById('backBtn').addEventListener('click', () => this.showAdminPanel());
+            },
+
+            editOffice(id) {
+                const office = backend.offices.find(o => o.id === parseInt(id));
+                if (office) {
+                    const content = document.getElementById('content');
+                    content.innerHTML = `
+                        <h2 class="mb-4">Modifica Ufficio</h2>
+                        <form id="editOfficeForm">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Nome Ufficio</label>
+                                <input type="text" class="form-control" id="name" value="${office.name}" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Salva</button>
+                            <button type="button" class="btn btn-secondary" id="cancelBtn">Annulla</button>
+                        </form>
+                    `;
+                    document.getElementById('editOfficeForm').addEventListener('submit', (e) => {
+                        e.preventDefault();
+                        const name = document.getElementById('name').value;
+                        backend.updateOffice(office.id, name);
+                        this.showOffices();
+                    });
+                    document.getElementById('cancelBtn').addEventListener('click', () => this.showOffices());
+                }
+            },
+
+            deleteOffice(id) {
+                if (confirm('Sei sicuro di voler eliminare questo ufficio?')) {
+                    backend.deleteOffice(parseInt(id));
+                    this.showOffices();
+                }
+            },
+
+            addOffice() {
+                const content = document.getElementById('content');
+                content.innerHTML = `
+                    <h2 class="mb-4">Aggiungi Ufficio</h2>
+                    <form id="addOfficeForm">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Nome Ufficio</label>
+                            <input type="text" class="form-control" id="name" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Salva</button>
+                        <button type="button" class="btn btn-secondary" id="cancelBtn">Annulla</button>
+                    </form>
+                `;
+                document.getElementById('addOfficeForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const name = document.getElementById('name').value;
+                    backend.addOffice(name);
+                    this.showOffices();
+                });
+                document.getElementById('cancelBtn').addEventListener('click', () => this.showOffices());
+            }
+        };
+
+        app.init();
+    </script>
+</body>
+</html>
